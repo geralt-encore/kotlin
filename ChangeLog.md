@@ -162,7 +162,7 @@
     (see [KEEP](https://github.com/Kotlin/KEEP/blob/master/proposals/underscore-for-unused-parameters.md))
 - [`KT-2783`](https://youtrack.jetbrains.com/issue/KT-2783) Allow to skip some components in a multi-declaration
     (see the same [KEEP](https://github.com/Kotlin/KEEP/blob/master/proposals/underscore-for-unused-parameters.md))
-- [`KT-11551`](https://youtrack.jetbrains.com/issue/KT-11551) limited scope for dsl writers 
+- [`KT-11551`](https://youtrack.jetbrains.com/issue/KT-11551) limited scope for dsl writers
     (see [KEEP](https://github.com/Kotlin/KEEP/blob/master/proposals/scope-control-for-implicit-receivers.md))
 
 ### Compiler
@@ -248,7 +248,7 @@
     can be inferred
 - [`KT-14752`](https://youtrack.jetbrains.com/issue/KT-14752) Exception while typing @JsName annotation in editor
 
-## 1.1-M02 (EAP-2)
+### Previous releases
 
 ### Language features
 
