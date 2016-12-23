@@ -1,0 +1,21 @@
+// My: to be implemented
+impl class My {
+    fun foo(param: String): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    fun String.bar(y: Double): Boolean {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    constructor(flag: Boolean) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    val isGood: Boolean
+        get() = TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    var status: Int
+        get() = TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        set(value) {}
+
+}

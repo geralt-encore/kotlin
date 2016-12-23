@@ -176,6 +176,10 @@ class KtPsiFactory(private val project: Project) {
         return createDeclaration(text)
     }
 
+    fun createObject(text: String): KtObjectDeclaration {
+        return createDeclaration(text)
+    }
+
     fun createCompanionObject(): KtObjectDeclaration {
         return createClass("class A {\n companion object{\n}\n}").getCompanionObjects().first()
     }
@@ -480,6 +484,9 @@ class KtPsiFactory(private val project: Project) {
         fun modifier(modifier: String): ClassHeaderBuilder {
             assert(state == State.MODIFIERS)
 
+            if (sb.isNotEmpty()) {
+                sb.append(" ")
+            }
             sb.append(modifier)
 
             return this
@@ -532,6 +539,12 @@ class KtPsiFactory(private val project: Project) {
 
             state = State.TYPE_CONSTRAINTS
 
+            return this
+        }
+
+        fun noBaseClass(): ClassHeaderBuilder {
+            assert(state == State.BASE_CLASS)
+            state = State.TYPE_CONSTRAINTS
             return this
         }
 
