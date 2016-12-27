@@ -16,12 +16,16 @@
 
 package org.jetbrains.kotlin.idea.script
 
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.JavaSdk
+import com.intellij.openapi.projectRoots.ProjectJdkTable
+import com.intellij.openapi.projectRoots.ex.PathUtilEx
 import org.jetbrains.kotlin.script.*
 import org.jetbrains.kotlin.utils.PathUtil
 import java.io.File
 import java.util.concurrent.Future
 
-class BundledKotlinScriptTemplateProvider : ScriptTemplatesProvider {
+class BundledKotlinScriptTemplateProvider(val project: Project) : ScriptTemplatesProvider {
     override val id: String = "BundledKotlinScriptTemplateProvider"
     override val version: Int = 1
     override val isValid: Boolean = true
@@ -29,24 +33,35 @@ class BundledKotlinScriptTemplateProvider : ScriptTemplatesProvider {
     override val templateClassNames: Iterable<String> get() = listOf("org.jetbrains.kotlin.idea.script.BundledScriptWithNoParam")
     override val dependenciesClasspath: Iterable<String> get() = emptyList()
     
-    override val environment: Map<String, Any?>? = null
+    override val environment: Map<String, Any?>? get() {
+        return mapOf(
+                "sdk" to getScriptSDK(project)
+        )
+    }
+
     override val resolver: ScriptDependenciesResolver = BundledKotlinScriptDependenciesResolver()
+
+    private fun getScriptSDK(project: Project): String? {
+        val jdk = PathUtilEx.getAnyJdk(project) ?:
+                  ProjectJdkTable.getInstance().allJdks.firstOrNull { sdk -> sdk.sdkType is JavaSdk }
+        
+        return jdk?.homePath
+    }
 }
 
 private class BundledKotlinScriptDependenciesResolver : ScriptDependenciesResolver {
-    private val dependencies = KotlinBundledScriptDependencies()
-
     override fun resolve(
             script: ScriptContents,
             environment: Map<String, Any?>?,
             report: (ScriptDependenciesResolver.ReportSeverity, String, ScriptContents.Position?) -> Unit,
             previousDependencies: KotlinScriptExternalDependencies?): Future<KotlinScriptExternalDependencies?> {
+        val javaHome = environment?.get("sdk") as String?
+        val dependencies = KotlinBundledScriptDependencies(javaHome)
         return PseudoFuture(dependencies)
     }
 }
 
-private class KotlinBundledScriptDependencies : KotlinScriptExternalDependencies {
-    override val javaHome: String? get() = super.javaHome
+private class KotlinBundledScriptDependencies(override val javaHome: String?) : KotlinScriptExternalDependencies {
     override val classpath: Iterable<File> get() {
         return with(PathUtil.getKotlinPathsForIdeaPlugin()) {
             listOf(
@@ -56,10 +71,6 @@ private class KotlinBundledScriptDependencies : KotlinScriptExternalDependencies
             )
         }
     }
-
-    override val imports: Iterable<String> get() = super.imports
-    override val sources: Iterable<File> get() = super.sources
-    override val scripts: Iterable<File> get() = super.scripts
 }
 
 @Suppress("unused")
