@@ -38,6 +38,7 @@ import com.intellij.util.io.URLUtil
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.idea.util.application.runWriteAction
+import org.jetbrains.kotlin.parsing.KotlinParserDefinition
 import org.jetbrains.kotlin.script.KotlinScriptDefinitionProvider
 import org.jetbrains.kotlin.script.KotlinScriptExternalImportsProvider
 import org.jetbrains.kotlin.script.StandardScriptDefinition
@@ -130,12 +131,12 @@ class KotlinScriptConfigurationManager(
 
     private fun cacheAllScriptsExtraImports() {
         runReadAction {
-            scriptExternalImportsProvider.apply {
-                invalidateCaches()
-                cacheExternalImports(
-                        scriptDefinitionProvider.getAllKnownFileTypes()
-                                .flatMap { FileTypeIndex.getFiles(it, GlobalSearchScope.allScope(project)) })
+            scriptExternalImportsProvider.invalidateCaches()
+            val files = scriptDefinitionProvider.getAllKnownFileTypes().flatMap {
+                FileTypeIndex.getFiles(it, GlobalSearchScope.allScope(project))
             }
+            val ktsFiles = files.filter { it.extension == KotlinParserDefinition.STD_SCRIPT_SUFFIX }
+            scriptExternalImportsProvider.cacheExternalImports(ktsFiles)
         }
     }
 
