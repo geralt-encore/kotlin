@@ -47,11 +47,24 @@ class JvmPackagePartProvider(
         val rootToPackageParts = getPackageParts(packageFqName)
         if (rootToPackageParts.isEmpty()) return emptyList()
 
-        val result = arrayListOf<String>()
+        val result = linkedSetOf<String>()
+        // This is a heuristic and won't work in some corner cases
+        // TODO (!): write multifile part -> facade mapping to .kotlin_module
+        val visitedMultifileFacades = linkedSetOf<String>()
         for ((_, packageParts) in rootToPackageParts) {
-            result.addAll(packageParts.parts)
+            val names = packageParts.parts.map { name -> name to name.substringBefore(JvmFileClassUtil.MULTIFILE_PART_NAME_DELIMITER, "") }
+            for ((name, facadeName) in names) {
+                if (facadeName.isEmpty() || facadeName !in visitedMultifileFacades) {
+                    result.add(name)
+                }
+            }
+            for ((_, facadeName) in names) {
+                if (facadeName.isNotEmpty()) {
+                    visitedMultifileFacades.add(facadeName)
+                }
+            }
         }
-        return result.distinct()
+        return result.toList()
     }
 
     override fun findMetadataPackageParts(packageFqName: String): List<String> =
