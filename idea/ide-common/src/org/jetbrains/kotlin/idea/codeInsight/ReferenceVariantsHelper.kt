@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.idea.util.*
 import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.FqNameUnsafe
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtExpression
@@ -49,7 +50,8 @@ class ReferenceVariantsHelper(
         private val bindingContext: BindingContext,
         private val resolutionFacade: ResolutionFacade,
         private val moduleDescriptor: ModuleDescriptor,
-        private val visibilityFilter: (DeclarationDescriptor) -> Boolean
+        private val visibilityFilter: (DeclarationDescriptor) -> Boolean,
+        private val notProperties: Set<FqNameUnsafe> = setOf()
 ) {
     fun getReferenceVariants(
             expression: KtSimpleNameExpression,
@@ -96,9 +98,9 @@ class ReferenceVariantsHelper(
 
     fun filterOutJavaGettersAndSetters(variants: Collection<DeclarationDescriptor>): Collection<DeclarationDescriptor> {
         val accessorMethodsToRemove = HashSet<FunctionDescriptor>()
-        val _variants = variants.filter { it !is SyntheticJavaPropertyDescriptor || !it.suppressedByNotPropertyList() }
+        val filteredVariants = variants.filter { it !is SyntheticJavaPropertyDescriptor || !it.suppressedByNotPropertyList(notProperties) }
 
-        for (variant in _variants) {
+        for (variant in filteredVariants) {
             if (variant is SyntheticJavaPropertyDescriptor) {
                 accessorMethodsToRemove.add(variant.getMethod.original)
 
@@ -109,7 +111,7 @@ class ReferenceVariantsHelper(
             }
         }
 
-        return _variants.filter { it !is FunctionDescriptor || it.original !in accessorMethodsToRemove }
+        return filteredVariants.filter { it !is FunctionDescriptor || it.original !in accessorMethodsToRemove }
     }
 
     // filters out variable inside its initializer

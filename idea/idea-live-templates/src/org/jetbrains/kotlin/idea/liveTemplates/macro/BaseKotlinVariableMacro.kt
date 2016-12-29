@@ -60,7 +60,7 @@ abstract class BaseKotlinVariableMacro<TState> : Macro() {
 
         val state = initState(contextElement, bindingContext)
 
-        val helper = ReferenceVariantsHelper(bindingContext, resolutionFacade, resolutionFacade.moduleDescriptor, ::isVisible)
+        val helper = ReferenceVariantsHelper(bindingContext, resolutionFacade, resolutionFacade.moduleDescriptor, ::isVisible, setOf())
         return helper
                 .getReferenceVariants(contextElement, CallTypeAndReceiver.DEFAULT, DescriptorKindFilter.VARIABLES, { true })
                 .map { it as VariableDescriptor }

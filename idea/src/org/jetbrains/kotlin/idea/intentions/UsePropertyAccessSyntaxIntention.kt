@@ -17,12 +17,21 @@
 package org.jetbrains.kotlin.idea.intentions
 
 import com.intellij.codeInspection.CleanupLocalInspectionTool
+import com.intellij.codeInspection.InspectionProfile
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
+import com.intellij.profile.Profile
+import com.intellij.profile.ProfileChangeAdapter
+import com.intellij.profile.codeInspection.InspectionProfileManager
+import com.intellij.profile.codeInspection.InspectionProjectProfileManager
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.diagnostics.Severity
 import org.jetbrains.kotlin.idea.analysis.analyzeInContext
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
+import org.jetbrains.kotlin.idea.configuration.ui.NotPropertyListPanel
+import org.jetbrains.kotlin.idea.core.NotPropertiesService
 import org.jetbrains.kotlin.idea.core.copied
 import org.jetbrains.kotlin.idea.core.replaced
 import org.jetbrains.kotlin.idea.inspections.IntentionBasedInspection
@@ -30,6 +39,7 @@ import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.idea.util.getResolutionScope
 import org.jetbrains.kotlin.idea.util.shouldNotConvertToProperty
+import org.jetbrains.kotlin.name.FqNameUnsafe
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getQualifiedExpressionForSelector
@@ -37,7 +47,6 @@ import org.jetbrains.kotlin.psi.psiUtil.getQualifiedExpressionForSelectorOrThis
 import org.jetbrains.kotlin.renderer.render
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DelegatingBindingTrace
-import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoAfter
 import org.jetbrains.kotlin.resolve.bindingContextUtil.getDataFlowInfoBefore
 import org.jetbrains.kotlin.resolve.bindingContextUtil.isUsedAsExpression
 import org.jetbrains.kotlin.resolve.calls.CallResolver
@@ -56,8 +65,54 @@ import org.jetbrains.kotlin.synthetic.SyntheticJavaPropertyDescriptor
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.TypeUtils
 import org.jetbrains.kotlin.types.typeUtil.isUnit
+import javax.swing.JComponent
 
-class UsePropertyAccessSyntaxInspection : IntentionBasedInspection<KtCallExpression>(UsePropertyAccessSyntaxIntention::class), CleanupLocalInspectionTool
+class UsePropertyAccessSyntaxInspection : IntentionBasedInspection<KtCallExpression>(UsePropertyAccessSyntaxIntention::class), CleanupLocalInspectionTool {
+
+    val fqNameList = mutableListOf<FqNameUnsafe>()
+
+    var fqNameStrings: List<String>
+        get() = fqNameList.map { it.asString() }
+        set(value) {
+            fqNameList.clear()
+            value.mapTo(fqNameList, ::FqNameUnsafe)
+        }
+
+
+    override fun createOptionsPanel(): JComponent? {
+        return NotPropertyListPanel(fqNameList)
+    }
+}
+
+
+class NotPropertiesServiceImpl(private val project: Project) : NotPropertiesService, Disposable, ProfileChangeAdapter() {
+    override fun dispose() {
+    }
+
+    init {
+        InspectionProfileManager.getInstance().addProfileChangeListener(this, this)
+        InspectionProjectProfileManager.getInstance(project).addProfilesListener(this, this)
+    }
+
+    override fun profileChanged(profile: Profile?) {
+        notProperties = collectNotProperties()
+    }
+
+    override var notProperties: Set<FqNameUnsafe> = collectNotProperties()
+
+    private fun collectNotProperties(): Set<FqNameUnsafe> {
+        @Suppress("UNCHECKED_CAST")
+        val profiles = (InspectionProjectProfileManager.getInstance(project).profiles +
+                        InspectionProfileManager.getInstance().profiles) as List<InspectionProfile>
+        return profiles.asSequence()
+                .map { it.getAllEnabledInspectionTools(project).find { it.tool.tool is UsePropertyAccessSyntaxInspection } }
+                .filterNotNull()
+                .flatMap {
+                    (it.tool.tool as UsePropertyAccessSyntaxInspection).fqNameList.asSequence()
+                }.toSet()
+
+    }
+}
 
 class UsePropertyAccessSyntaxIntention : SelfTargetingOffsetIndependentIntention<KtCallExpression>(KtCallExpression::class.java, "Use property access syntax") {
     override fun isApplicableTo(element: KtCallExpression): Boolean {
@@ -88,7 +143,8 @@ class UsePropertyAccessSyntaxIntention : SelfTargetingOffsetIndependentIntention
         if (!resolvedCall.isReallySuccess()) return null
 
         val function = resolvedCall.resultingDescriptor as? FunctionDescriptor ?: return null
-        if (function.shouldNotConvertToProperty()) return null
+
+        if (function.shouldNotConvertToProperty(NotPropertiesService.getInstance(callExpression.project).notProperties)) return null
 
         val resolutionScope = callExpression.getResolutionScope(bindingContext, resolutionFacade)
         val property = findSyntheticProperty(function, resolutionFacade.getFrontendService(SyntheticScopes::class.java)) ?: return null

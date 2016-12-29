@@ -23,20 +23,10 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.overriddenTreeUniqueAsSequence
 import org.jetbrains.kotlin.synthetic.SyntheticJavaPropertyDescriptor
 
-
-private val notPropertiesFqNames: List<org.jetbrains.kotlin.name.FqNameUnsafe> = listOf(
-        "java.net.Socket.getInputStream",
-        "java.net.Socket.getOutputStream"
-).map(::FqNameUnsafe)
-
-
-private fun byFqName(fqName: FqNameUnsafe) = fqName in notPropertiesFqNames
-
-
-fun FunctionDescriptor.shouldNotConvertToProperty(): Boolean {
-    if (byFqName(fqNameUnsafe)) return true
-    return this.overriddenTreeUniqueAsSequence(false).any { byFqName(it.fqNameUnsafe) }
+fun FunctionDescriptor.shouldNotConvertToProperty(notProperties: Set<FqNameUnsafe>): Boolean {
+    if (fqNameUnsafe in notProperties) return true
+    return this.overriddenTreeUniqueAsSequence(false).any { fqNameUnsafe in notProperties }
 }
 
-fun SyntheticJavaPropertyDescriptor.suppressedByNotPropertyList() =
-        getMethod.shouldNotConvertToProperty() || setMethod?.shouldNotConvertToProperty() ?: false
+fun SyntheticJavaPropertyDescriptor.suppressedByNotPropertyList(set: Set<FqNameUnsafe>) =
+        getMethod.shouldNotConvertToProperty(set) || setMethod?.shouldNotConvertToProperty(set) ?: false
