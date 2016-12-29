@@ -120,7 +120,11 @@ class NotPropertiesServiceImpl(private val project: Project) : NotPropertiesServ
 
     companion object {
         val default by lazy {
-            this::class.java.getResourceAsStream("/defaultNotProperties.txt").bufferedReader().readLines().toMutableList()
+            this::class.java.getResourceAsStream("/defaultNotProperties.txt")
+                    .bufferedReader()
+                    .readLines()
+                    .filter(String::isNotBlank)
+                    .toMutableList()
         }
     }
 }
