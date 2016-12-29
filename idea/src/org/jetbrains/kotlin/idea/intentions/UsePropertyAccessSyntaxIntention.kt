@@ -25,6 +25,10 @@ import com.intellij.profile.Profile
 import com.intellij.profile.ProfileChangeAdapter
 import com.intellij.profile.codeInspection.InspectionProfileManager
 import com.intellij.profile.codeInspection.InspectionProjectProfileManager
+import com.intellij.util.xmlb.XmlSerializer
+import com.intellij.util.xmlb.XmlSerializerUtil
+import org.jdom.Element
+import org.jdom.input.SAXBuilder
 import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.diagnostics.Severity
@@ -65,6 +69,8 @@ import org.jetbrains.kotlin.synthetic.SyntheticJavaPropertyDescriptor
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.TypeUtils
 import org.jetbrains.kotlin.types.typeUtil.isUnit
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import javax.swing.JComponent
 
 class UsePropertyAccessSyntaxInspection : IntentionBasedInspection<KtCallExpression>(UsePropertyAccessSyntaxIntention::class), CleanupLocalInspectionTool {
@@ -78,6 +84,9 @@ class UsePropertyAccessSyntaxInspection : IntentionBasedInspection<KtCallExpress
             value.mapTo(fqNameList, ::FqNameUnsafe)
         }
 
+    init {
+        fqNameStrings = NotPropertiesServiceImpl.default
+    }
 
     override fun createOptionsPanel(): JComponent? {
         return NotPropertyListPanel(fqNameList)
@@ -102,15 +111,17 @@ class NotPropertiesServiceImpl(private val project: Project) : NotPropertiesServ
 
     private fun collectNotProperties(): Set<FqNameUnsafe> {
         @Suppress("UNCHECKED_CAST")
-        val profiles = (InspectionProjectProfileManager.getInstance(project).profiles +
-                        InspectionProfileManager.getInstance().profiles) as List<InspectionProfile>
-        return profiles.asSequence()
-                .map { it.getAllEnabledInspectionTools(project).find { it.tool.tool is UsePropertyAccessSyntaxInspection } }
-                .filterNotNull()
-                .flatMap {
-                    (it.tool.tool as UsePropertyAccessSyntaxInspection).fqNameList.asSequence()
-                }.toSet()
+        val profile = InspectionProjectProfileManager.getInstance(project).inspectionProfile
+        val intention = profile.getAllEnabledInspectionTools(project)
+                .map { it.tool.tool }
+                .firstIsInstanceOrNull<UsePropertyAccessSyntaxInspection>()
+        return intention?.fqNameList?.toSet() ?: emptySet()
+    }
 
+    companion object {
+        val default by lazy {
+            this::class.java.getResourceAsStream("/defaultNotProperties.txt").bufferedReader().readLines().toMutableList()
+        }
     }
 }
 

@@ -1,0 +1,2 @@
+java.net.Socket.getInputStream
+java.net.Socket.getOutputStream
