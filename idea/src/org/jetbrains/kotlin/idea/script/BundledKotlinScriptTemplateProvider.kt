@@ -24,15 +24,16 @@ import org.jetbrains.kotlin.script.*
 import org.jetbrains.kotlin.utils.PathUtil
 import java.io.File
 import java.util.concurrent.Future
+import kotlin.script.templates.standard.ScriptTemplateWithArgs
 
 class BundledKotlinScriptTemplateProvider(val project: Project) : ScriptTemplatesProvider {
     override val id: String = "BundledKotlinScriptTemplateProvider"
     override val version: Int = 1
     override val isValid: Boolean = true
 
-    override val templateClassNames: Iterable<String> get() = listOf("org.jetbrains.kotlin.idea.script.BundledScriptWithNoParam")
+    override val templateClassNames: Iterable<String> get() = listOf(ScriptTemplateWithArgs::class.qualifiedName!!)
     override val dependenciesClasspath: Iterable<String> get() = emptyList()
-    
+
     override val environment: Map<String, Any?>? get() {
         return mapOf(
                 "sdk" to getScriptSDK(project)
@@ -49,7 +50,7 @@ class BundledKotlinScriptTemplateProvider(val project: Project) : ScriptTemplate
     }
 }
 
-private class BundledKotlinScriptDependenciesResolver : ScriptDependenciesResolver {
+class BundledKotlinScriptDependenciesResolver : ScriptDependenciesResolver {
     override fun resolve(
             script: ScriptContents,
             environment: Map<String, Any?>?,
@@ -61,7 +62,7 @@ private class BundledKotlinScriptDependenciesResolver : ScriptDependenciesResolv
     }
 }
 
-private class KotlinBundledScriptDependencies(override val javaHome: String?) : KotlinScriptExternalDependencies {
+class KotlinBundledScriptDependencies(override val javaHome: String?) : KotlinScriptExternalDependencies {
     override val classpath: Iterable<File> get() {
         return with(PathUtil.getKotlinPathsForIdeaPlugin()) {
             listOf(
@@ -72,7 +73,3 @@ private class KotlinBundledScriptDependencies(override val javaHome: String?) : 
         }
     }
 }
-
-@Suppress("unused")
-@ScriptTemplateDefinition
-private class BundledScriptWithNoParam
