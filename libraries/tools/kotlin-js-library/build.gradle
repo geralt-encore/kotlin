@@ -1,0 +1,16 @@
+
+description = 'Kotlin JavaScript Library'
+
+//configurations.create('default')
+
+def targetName = "${project.name}-${version}.jar"
+
+task copyJar(type: Copy) {
+    from("${rootDir}/../dist/kotlinc/lib/kotlin-jslib.jar")
+    into(buildDir)
+    rename('.*', targetName)
+}
+
+artifacts {
+    archives file("${buildDir}/${targetName}")
+}
