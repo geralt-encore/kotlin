@@ -100,6 +100,11 @@ public interface ClassDescriptor extends ClassifierDescriptorWithTypeParameters,
     @NotNull
     List<TypeParameterDescriptor> getDeclaredTypeParameters();
 
+    /**
+     * @return direct subclasses of this class if it's a sealed class, empty list otherwise
+     */
+    Collection<ClassDescriptor> getSealedSubclasses();
+
     @NotNull
     @Override
     ClassDescriptor getOriginal();
