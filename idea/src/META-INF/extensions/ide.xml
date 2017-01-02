@@ -17,7 +17,7 @@
 
         <scriptTemplatesProvider implementation="org.jetbrains.kotlin.idea.core.script.GradleScriptTemplatesProvider"/>
         <scriptTemplatesProvider implementation="org.jetbrains.kotlin.idea.script.ScriptTemplatesFromCompilerSettingsProvider"/>
-        <scriptTemplatesProvider order="after KotlinCompilerScriptTemplatesSettings"
+        <scriptTemplatesProvider order="last"
                                  implementation="org.jetbrains.kotlin.idea.script.BundledKotlinScriptTemplateProvider"/>
     </extensions>
 </idea-plugin>
