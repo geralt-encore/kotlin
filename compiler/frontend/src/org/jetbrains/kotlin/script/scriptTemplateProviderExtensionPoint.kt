@@ -56,7 +56,13 @@ fun makeScriptDefsFromTemplatesProviders(providers: Iterable<ScriptTemplatesProv
                                          errorsHandler: ((ScriptTemplatesProvider, Exception) -> Unit) = { ep, ex -> throw ex }
 ): List<KotlinScriptDefinitionFromAnnotatedTemplate> {
     val idToVersion = hashMapOf<String, Int>()
-    return providers.filter { it.isValid }.sortedByDescending { it.version }.flatMap { provider ->
+
+    val validProviders = providers.filter { it.isValid }
+    val sortedByVersion = validProviders.sortSubGroups(
+            groupKey = { it.id },
+            groupSort = { providersWithSameId -> providersWithSameId.sortedByDescending { provider -> provider.version } })
+
+    return sortedByVersion.flatMap { provider ->
         try {
             idToVersion.get(provider.id)?.let { ver -> errorsHandler(provider, RuntimeException("Conflicting scriptTemplatesProvider ${provider.id}, using one with version $ver")) }
             Logger.getInstance("makeScriptDefsFromTemplatesProviders")
@@ -73,4 +79,24 @@ fun makeScriptDefsFromTemplatesProviders(providers: Iterable<ScriptTemplatesProv
             emptyList<KotlinScriptDefinitionFromAnnotatedTemplate>()
         }
     }
+}
+
+private fun <T, K> List<T>.sortSubGroups(groupKey: (T) -> K, groupSort: (List<T>) -> List<T>): List<T> {
+    val result: MutableList<T> = toMutableList()
+    
+    val groupToOriginalIndexes: List<Pair<List<T>, List<Int>>> =
+            result
+            .mapIndexed { i, t -> t to i } // List<Pair<T, Int>>
+            .groupBy { groupKey(it.first) } // Map<K, List<Pair<T, Int>>>
+            .values // List<List<Pair<T, Int>>>
+            .map { it.unzip() }
+
+    for ((group, originalIndexes) in groupToOriginalIndexes) {
+        val sortedGroup = groupSort(group)
+        for ((indexInSortedGroup, originalElementIndex) in originalIndexes.withIndex()) {
+            result[originalElementIndex] = sortedGroup[indexInSortedGroup]
+        }
+    }
+
+    return result
 }
